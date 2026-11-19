@@ -23,21 +23,37 @@ It replaces the stock `cal-card` with a card that fits a glass / "Casa Futura" l
 
 ## Install
 
-### HACS
+The easiest way to install a custom Home Assistant dashboard card is through [HACS](https://hacs.xyz/) (Home Assistant Community Store), which handles file placement, resource registration, and updates. You can also install the card manually if you don't use HACS.
 
-1. HACS → Dashboards (or Plugins, depending on your HACS version) → ⋮ → *Custom repositories*
-2. Add `https://github.com/renewelches/glass-calendar-card`, type **Dashboard**
-3. Install **Glass Calendar Card** and reload the browser
+### Method 1: Install via HACS (recommended)
 
-### Manual
+1. Open HACS in your Home Assistant sidebar.
+2. Go to **Dashboards** (your HACS version may call this **Plugins**) and search for **Glass Calendar Card**.
+   - If the card isn't listed by default, open the **three-dot menu** in HACS, choose **Custom repositories**, paste the card's GitHub URL — `https://github.com/renewelches/glass-calendar-card` — select **Dashboard** as the category, and add it.
+3. Select the card and click **Download**.
+4. Refresh your browser cache (such as `Ctrl + F5` on Windows, `⇧⌘R` on macOS) so Home Assistant loads the new frontend resource.
 
-Copy `dist/glass-calendar-card.js` into `config/www/`, add it to `configuration.yaml`:
+After this, the card can be added to the dashboard: **Edit dashboard → ＋ Add card → Glass Calendar Card** (or, in the custom-element list, `custom:glass-calendar-card`) and pick one of your `calendar.` entities.
 
-```yaml
-http:
-  extra_config_url_paths:
-    - /local
-```
+### Method 2: Manual install (without HACS)
+
+1. Copy `dist/glass-calendar-card.js` into your Home Assistant config folder: `config/www/`.
+2. In `configuration.yaml`, make the folder available to the frontend:
+   ```yaml
+   http:
+     extra_config_url_paths:
+       - /local
+   ```
+   Then restart Home Assistant.
+3. Edit your dashboard → **⋮ menu → Raw view editor** and add the resource to the end of `resources:`:
+   ```yaml
+   resources:
+     - url: /local/glass-calendar-card.js
+       type: module
+   ```
+4. Save and refresh your browser cache (`Ctrl + F5` / `⇧⌘R`).
+
+Now the card can be added to the dashboard exactly as with HACS: **Edit dashboard → ＋ Add card → Custom element → `custom:glass-calendar-card`**. The only difference: updates have to be done manually (download a new `glass-calendar-card.js` and overwrite the old file in `config/www/`).
 
 ## Usage
 
