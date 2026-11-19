@@ -21,7 +21,7 @@ jobs:
       - name: HACS validation
         uses: hacs/action@main
         with:
-          category: dashboard
+          category: plugin
 
       - name: GitHub release
         uses: softprops/action-gh-release@v2
