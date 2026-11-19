@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glass Calendar Card – demo</title>
+<style>
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: system-ui, sans-serif; color: #eef4ff; padding: 32px;
+    background:
+      radial-gradient(900px 620px at 0% 0%, rgba(0,170,255,.26), transparent 60%),
+      radial-gradient(820px 600px at 100% 6%, rgba(150,70,255,.26), transparent 60%),
+      radial-gradient(900px 700px at 60% 110%, rgba(0,255,170,.14), transparent 60%), #000;
+  }
+  body.light { color: #1c2433; background: radial-gradient(900px 620px at 0% 0%, rgba(0,170,255,.25), transparent 60%), radial-gradient(820px 600px at 100% 6%, rgba(150,70,255,.18), transparent 60%), #e9eef6; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+  .slot { width: var(--w, 860px); }
+  .shot body, body.shot { padding: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap"></div>
+<script>
+/* A tiny stand-in for Home Assistant's <ha-icon>, using the Material Design Icons webfont (demo only). */
+const MDI = 'https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css';
+document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="' + MDI + '">');
+customElements.define('ha-icon', class extends HTMLElement {
+  static get observedAttributes() { return ['icon']; }
+  constructor() { super(); this.attachShadow({ mode: 'open' }); }
+  connectedCallback() { this._r(); }
+  attributeChangedCallback() { this._r(); }
+  set icon(v) { this.setAttribute('icon', v); }
+  _r() {
+    const name = String(this.getAttribute('icon') || '').replace('mdi:', '');
+    this.shadowRoot.innerHTML = '<link rel="stylesheet" href="' + MDI + '">' +
+      '<style>:host{display:inline-flex;align-items:center;justify-content:center;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px)}' +
+      'i{font-size:var(--mdc-icon-size,24px);line-height:1}</style><i class="mdi mdi-' + name + '"></i>';
+  }
+});
+customElements.define('ha-card', class extends HTMLElement {});
+
+const Q = new URLSearchParams(location.search);
+const lang = Q.get('lang') || 'en';
+const light = Q.get('theme') === 'light';
+if (light) document.body.classList.add('light');
+if (Q.get('shot')) document.body.classList.add('shot');
+
+/* optional fixed time for screenshots: ?time=10:24 */
+if (Q.get('time')) {
+  const [H, M] = Q.get('time').split(':').map(Number);
+  const RealDate = Date, base = new RealDate(); base.setHours(H, M, 24, 0);
+  const offset = base.getTime() - RealDate.now();
+  window.Date = class extends RealDate {
+    constructor(...a) { if (a.length) super(...a); else super(RealDate.now() + offset); }
+    static now() { return RealDate.now() + offset; }
+  };
+}
+
+const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
+const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const dt = (n, h, m) => { const d = day(n); d.setHours(h, m || 0, 0, 0); return d.toISOString(); };
+
+const de = lang === 'de';
+const it = lang === 'it';
+const ds = (n) => ({ date: ymd(day(n)) });                     // all-day event on day +n
+const dts = (n, h, m) => ({ dateTime: dt(n, h, m || 0) });     // timed event on day +n
+const ev = (summary, s, e, location, hidden) => ({ summary, start: s, end: e, location, hidden });
+const events = [
+  de ? ev('Gelber Sack ab 6 Uhr', ds(0), ds(1)) : it ? ev('Raccolta Plastica', ds(0), ds(1)) : ev('Yellow bag', ds(0), ds(1)),
+  de ? ev('Zahnarzt', dts(0, 9, 30), dts(0, 11, 30), 'Dr. Meier, Hauptstr. 12') : it ? ev('Dentista', dts(0, 9, 30), dts(0, 11, 30), 'Via Roma 1') : ev('Dentist', dts(0, 9, 30), dts(0, 11, 30), '12 Main St'),
+  de ? ev('Papier', ds(1), ds(2)) : it ? ev('Carta e cartone', ds(1), ds(2)) : ev('Paper & cardboard', ds(1), ds(2)),
+  de ? ev('Fußball', dts(1, 19, 0), dts(1, 21, 0), 'Sportplatz') : it ? ev('Calcio', dts(1, 19, 0), dts(1, 21, 0), 'Stadio') : ev('Soccer practice', dts(1, 19, 0), dts(1, 21, 0), 'Stadium'),
+  de ? ev('Team-Meeting', dts(2, 8, 30), dts(2, 10, 0), 'Konferenzraum A') : it ? ev('Riunione', dts(2, 8, 30), dts(2, 10, 0), 'Sala A') : ev('Team meeting', dts(2, 8, 30), dts(2, 10, 0), 'Room A'),
+  de ? ev('Glas', ds(3), ds(4)) : it ? ev('Vetro', ds(3), ds(4)) : ev('Glass', ds(3), ds(4)),
+  de ? ev('Geburtstag Anna 🎂', ds(4), ds(5)) : it ? ev('Compleanno Anna 🎂', ds(4), ds(5)) : ev("Anna's birthday 🎂", ds(4), ds(5)),
+  de ? ev('Restmüll', ds(6), ds(7)) : it ? ev('Indifferenziato', ds(6), ds(7)) : ev('General waste', ds(6), ds(7)),
+  ev(de ? 'Versteckt' : 'Hidden event', dts(1, 12, 0), dts(1, 13, 0), null, true)
+];
+
+const hass = {
+  language: lang, locale: { language: lang, time_format: Q.get('h12') ? '12' : 'language' },
+  themes: { darkMode: !light },
+  config: { latitude: 45.46, longitude: 9.19, unit_system: { temperature: '°C' } },
+  localize: () => '',
+  states: {
+    'calendar.household': { entity_id: 'calendar.household', state: '2', attributes: { friendly_name: de ? 'Haushalt' : it ? 'Casa' : 'Household', calendar: 'google' } }
+  },
+  callApi: (method, path) => Promise.resolve(events)
+};
+
+const types = de
+  ? [{ pattern: 'Gelb', label: 'Gelber Sack', icon: 'mdi:bottle-soda-classic-outline', color: [255, 198, 64] },
+     { pattern: 'Papier', label: 'Papier', icon: 'mdi:newspaper-variant-outline', color: [96, 165, 250] },
+     { pattern: 'Glas', label: 'Glas', icon: 'mdi:glass-fragile', color: [92, 210, 200] },
+     { pattern: 'Rest', label: 'Restmüll', icon: 'mdi:trash-can-outline', color: [170, 182, 200] }]
+  : it
+  ? [{ pattern: 'Plastica', label: 'Plastica', icon: 'mdi:bottle-soda-classic-outline', color: [255, 198, 64] },
+     { pattern: 'Carta', label: 'Carta', icon: 'mdi:newspaper-variant-outline', color: [96, 165, 250] },
+     { pattern: 'Vetro', label: 'Vetro', icon: 'mdi:glass-fragile', color: [92, 210, 200] },
+     { pattern: 'Indifferenziat', label: 'Indifferenziato', icon: 'mdi:trash-can-outline', color: [170, 182, 200] }]
+  : [{ pattern: 'Yellow', label: 'Yellow bag', icon: 'mdi:bottle-soda-classic-outline', color: [255, 198, 64] },
+     { pattern: 'Paper', label: 'Paper', icon: 'mdi:newspaper-variant-outline', color: [96, 165, 250] },
+     { pattern: 'Glass', label: 'Glass', icon: 'mdi:glass-fragile', color: [92, 210, 200] },
+     { pattern: 'General', label: 'General waste', icon: 'mdi:trash-can-outline', color: [170, 182, 200] }];
+
+const base = {
+  type: 'custom:glass-calendar-card', entity: 'calendar.household',
+  days: 7, max_events: 8, show_location: true, default_icon: 'mdi:calendar-star', calendar_types: types
+};
+const extra = Q.get('config') ? JSON.parse(Q.get('config')) : {};
+const widths = (Q.get('w') || '860').split(',');
+
+const s = document.createElement('script');
+s.src = '../dist/glass-calendar-card.js';
+s.onload = () => {
+  widths.forEach((w) => {
+    const slot = document.createElement('div'); slot.className = 'slot'; slot.style.setProperty('--w', w + 'px');
+    const card = document.createElement('glass-calendar-card');
+    card.setConfig(Object.assign({}, base, extra));
+    slot.appendChild(card); document.getElementById('wrap').appendChild(slot);
+    card.hass = hass;
+  });
+};
+document.head.appendChild(s);
+</script>
+</body>
+</html>
