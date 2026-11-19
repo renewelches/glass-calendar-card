@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JavaScript syntax
+        run: node --check dist/glass-calendar-card.js
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: dashboard
+
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/glass-calendar-card.js
+            LICENSE
+          body: |
+            Install via HACS (recommended) — see the [README](README.md#install).
+            For a manual install download `glass-calendar-card.js` into `config/www/`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

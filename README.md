@@ -123,6 +123,41 @@ clock card (accent color, font, glow, corner radius, …).
 
 Colors can be written as `[r, g, b]`, `"#rrggbb"` or `"r, g, b"`.
 
+## Updates
+
+Home Assistant itself does not update custom cards — the card is just a frontend resource your own HA serves. Updates arrive through whatever method you installed with:
+
+- **HACS (recommended):** HACS watches the *git tags* of the repo. When a new version tag (e.g. `v1.1.0`) is pushed, a **red dot** appears on HACS in your sidebar. Click HACS → **Glass Calendar Card** → **New version available** → **Update**, then refresh your browser (`Ctrl + F5` / `⇧⌘R`).
+- **Manual:** download the `glass-calendar-card.js` from the new [release](../../releases), overwrite the file in `config/www/`, and hard-refresh the browser.
+
+## Security & third-party code
+
+The card ships with **zero JavaScript dependencies** — there is no `package.json` and nothing is bundled from npm, so there is no JS supply chain to compromise. The only external resources it can load are:
+
+| Resource | Where | Why | Opt-out |
+| -------- | ----- | --- | ------- |
+| Space Grotesk font (Google Fonts) | card | the default font | set `font: theme` |
+| MDI webfont (jsDelivr) | demo page only | demo icons | n/a, not part of the card |
+
+All event data stays inside your Home Assistant instance.
+
+CI enforces this on every push/PR (`Security` workflow):
+
+- **Dependency audit** — `npm audit` for high-severity vulnerabilities if a `package.json`/lockfile ever appears
+- **Third-party URL scan** — `scripts/external-urls.mjs` fails the build if any new external origin (a new CDN, a new script source) shows up in the card or the demo, so a dependency can never sneak in unnoticed
+- **CodeQL** — static analysis of the JavaScript for common vulnerability patterns (e.g. DOM XSS via `innerHTML`)
+
+## Releases
+
+Releases are created automatically by GitHub Actions: push a semver tag and the `Release` workflow runs the checks (syntax, HACS validation) and publishes `dist/glass-calendar-card.js` plus the LICENSE as a GitHub release:
+
+```
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+HACS uses these same tags to detect new versions (see *Updates* above).
+
 ## Demo
 
 The repo includes a small demo page (no Home Assistant required):
