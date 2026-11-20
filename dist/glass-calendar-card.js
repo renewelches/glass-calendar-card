@@ -10,7 +10,7 @@
 
   var CARD = 'glass-calendar-card';
   var EDITOR = CARD + '-editor';
-  var VERSION = '1.1.0';
+  var VERSION = '1.1.1';
   var REPO = 'https://github.com/renewelches/glass-calendar-card';
   if (customElements.get(CARD)) return;
 
@@ -77,6 +77,7 @@
       text_scale: 'Text size', text_scale_h: 'Larger values make the card easier to read from a distance.',
       min_height: 'Minimum height',
       cals_h: 'Display name and color for each calendar. With multiple calendars, every event gets a small dot in its calendar’s color.',
+      add_calendar: 'Add calendar',
       glass: 'Glass effect', glow: 'Glow intensity', border_radius: 'Corner radius',
       accent_color: 'Accent color', text_color: 'Text color',
       background_color: 'Background tint', background_opacity: 'Tint strength', reset_colors: 'Reset colors',
@@ -100,6 +101,7 @@
       text_scale: 'Textgröße', text_scale_h: 'Größere Werte machen die Karte auch aus der Entfernung lesbar.',
       min_height: 'Minimale Höhe',
       cals_h: 'Anzeigename und Farbe für jeden Kalender. Bei mehreren Kalendern erhält jedes Ereignis einen Punkt in der Farbe seines Kalenders.',
+      add_calendar: 'Kalender hinzufügen',
       glass: 'Glas-Effekt', glow: 'Leuchtstärke', border_radius: 'Eckenradius',
       accent_color: 'Akzentfarbe', text_color: 'Textfarbe',
       background_color: 'Hintergrundtönung', background_opacity: 'Tönungsstärke', reset_colors: 'Farben zurücksetzen',
@@ -123,6 +125,7 @@
       text_scale: 'Grandezza dei testi', text_scale_h: 'Valori più alti rendono la card leggibile anche da lontano.',
       min_height: 'Altezza minima',
       cals_h: 'Nome e colore per ogni calendario. Con più calendari, ogni evento porta un punto nel colore del suo calendario.',
+      add_calendar: 'Aggiungi calendario',
       glass: 'Effetto vetro', glow: 'Intensità del bagliore', border_radius: 'Raggio degli angoli',
       accent_color: 'Colore principale', text_color: 'Colore dei testi',
       background_color: 'Tinta dello sfondo', background_opacity: 'Intensità della tinta', reset_colors: 'Ripristina i colori',
@@ -667,6 +670,8 @@
       if (this._form) this._form.hass = h;
       (this._rows || []).forEach(function (r) { r.hass = h; });
       (this._calRows || []).forEach(function (r) { r.hass = h; });
+      var pick = this._calsPanel ? this._calsPanel.querySelector('#pick') : null;
+      if (pick) pick.hass = h;
       if (!this._form) this._draw();
     }
     connectedCallback() { this._draw(); }
@@ -682,7 +687,6 @@
       var c = this._config, L = this._L.bind(this), sel = function (o) { return { select: { mode: 'dropdown', options: o } }; };
       var n = resolveCals(c).length;
       var calendar = [
-        { name: 'entities', selector: { entity: { filter: { domain: 'calendar' }, multiple: true } } },
         { name: 'name', selector: { text: {} } }
       ];
       if (n > 0) {
@@ -743,7 +747,6 @@
       Object.keys(DEF).forEach(function (k) { if (DEF[k] != null) d[k] = DEF[k]; });
       COLOR_KEYS.forEach(function (k) { d[k] = P[k]; });
       d = Object.assign(d, c);
-      d.entities = resolveCals(this._config).map(function (x) { return x.id; });
       COLOR_KEYS.concat(['background_color', 'default_color']).forEach(function (k) {
         if (c[k] != null) d[k] = rgbArr(rgb(c[k], (P[k] || [0, 0, 0]).join(',')));
       });
@@ -803,6 +806,12 @@
           'button.b ha-icon{--mdc-icon-size:18px}' +
           'button.icon{border:0;background:none;cursor:pointer;color:var(--secondary-text-color);padding:6px;border-radius:50%}' +
           'button.icon:hover{color:var(--error-color, #db4437);background:var(--secondary-background-color)}' +
+          '.chips{display:flex;flex-wrap:wrap;gap:6px}' +
+          '.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--divider-color);background:var(--card-background-color);color:var(--primary-text-color);border-radius:16px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}' +
+          '.chip:hover{border-color:var(--error-color, #db4437);color:var(--error-color, #db4437)}' +
+          '.chip ha-icon{--mdc-icon-size:14px}' +
+          '.chip .cdot{width:8px;height:8px;border-radius:50%;background:var(--cc);box-shadow:0 0 6px var(--cc);flex:none}' +
+          '.addrow{display:flex;gap:8px;align-items:flex-start;margin-top:10px}.addrow .grow{flex:1;min-width:0}' +
           '.calid{font-size:12px;color:var(--secondary-text-color);font-family:var(--ha-font-family-monospace, monospace);margin:0 0 6px}' +
           '.foot{font-size:12px;color:var(--secondary-text-color);text-align:right}.foot a{color:inherit}' +
           '</style><div class="box"><div id="form"></div><div id="cals"></div><div id="types"></div>' +
@@ -862,46 +871,88 @@
       }, this);
       return out;
     }
+    _setCals(ids) {
+      var v = Object.assign({}, this._config, { entities: ids });
+      delete v.entity;
+      this._syncCalData(ids);
+      v.calendars = this._calEntries(ids);
+      this._emit(this._clean(v));
+    }
     _drawCals() {
       var self = this, L = this._L.bind(this), host = this._root.getElementById('cals'), c = this._config;
       var cals = resolveCals(c);
       var key = cals.map(function (x) { return x.id; }).join(',');
-      if (cals.length < 2) { host.innerHTML = ''; this._calRows = []; this._calsPanel = null; this._calKey = null; return; }
+      if (!cals.length) { host.innerHTML = ''; this._calRows = []; this._calsPanel = null; this._calKey = null; return; }
       if (!this._calsPanel || !host.contains(this._calsPanel)) {
         host.innerHTML = '';
         var p = document.createElement('ha-expansion-panel');
-        p.outlined = true; p.header = L('s_calendars');
-        p.innerHTML = '<div class="types"><p class="help">' + esc(L('cals_h')) + '</p><div id="rows"></div></div>';
+        p.outlined = true; p.expanded = true; p.header = L('s_calendars');
+        p.innerHTML = '<div class="types"><div id="chips"></div>' +
+          '<div class="addrow"><div class="grow"><ha-selector-entity id="pick"></ha-selector-entity></div>' +
+          '<button class="b" id="addc"><ha-icon icon="mdi:plus"></ha-icon>' + esc(L('add_calendar')) + '</button></div>' +
+          '<p class="help" id="chelp">' + esc(L('cals_h')) + '</p><div id="rows"></div></div>';
         host.appendChild(p);
         this._calsPanel = p; this._calKey = null;
+        p.querySelector('#addc').addEventListener('click', function () {
+          var pick = p.querySelector('#pick');
+          var id = normId(pick.value);
+          if (!id) return;
+          var ids = resolveCals(self._config).map(function (x) { return x.id; });
+          if (ids.indexOf(id) < 0) ids.push(id);
+          self._setCals(ids);
+          pick.value = '';
+        });
       }
+      var pick = this._calsPanel.querySelector('#pick');
+      pick.hass = this._hass;
+      pick.label = L('add_calendar');
+      pick.selector = { filter: { domain: 'calendar' } };
+      if (!pick.value) pick.value = '';
+      this._calsPanel.querySelector('#chelp').style.display = cals.length > 1 ? '' : 'none';
+      var chipsEl = this._calsPanel.querySelector('#chips');
       var rowsEl = this._calsPanel.querySelector('#rows');
       if (this._calKey !== key) {
         this._calKey = key;
-        rowsEl.innerHTML = ''; this._calRows = [];
+        this._syncCalData(cals.map(function (x) { return x.id; }));
+        chipsEl.innerHTML = ''; this._calRows = [];
         cals.forEach(function (cal, i) {
-          var row = document.createElement('div'); row.className = 'row';
-          var id = document.createElement('p'); id.className = 'calid'; id.textContent = cal.id; row.appendChild(id);
-          var f = document.createElement('ha-form');
-          f.hass = self._hass;
-          f.computeLabel = function (s) { return L(s.name); };
-          f.schema = [{ type: 'grid', name: '', schema: [
-            { name: 'name', selector: { text: {} } }, { name: 'color', selector: { color_rgb: {} } }
-          ] }];
-          f.addEventListener('value-changed', function (ev) {
-            ev.stopPropagation();
-            self._calData[i] = ev.detail.value;
-            var ids = resolveCals(self._config).map(function (x) { return x.id; });
-            var v = Object.assign({}, self._config, { entities: ids, calendars: self._calEntries(ids) });
-            delete v.entity;
-            self._emit(self._clean(v));
+          var chip = document.createElement('button');
+          chip.className = 'chip'; chip.style.setProperty('--cc', 'rgb(' + cal.color + ')');
+          chip.title = cal.id;
+          chip.innerHTML = '<i class="cdot"></i><span>' + esc(cal.name || cal.id) + '</span><ha-icon icon="mdi:close"></ha-icon>';
+          chip.addEventListener('click', function () {
+            var ids = resolveCals(self._config).map(function (x) { return x.id; }).filter(function (x) { return x !== cal.id; });
+            self._setCals(ids);
           });
-          row.appendChild(f); rowsEl.appendChild(row);
-          self._calRows.push(f);
+          chipsEl.appendChild(chip);
+          if (cals.length > 1) {
+            var row = document.createElement('div'); row.className = 'row';
+            var id = document.createElement('p'); id.className = 'calid'; id.textContent = cal.id; row.appendChild(id);
+            var f = document.createElement('ha-form');
+            f.hass = self._hass;
+            f.computeLabel = function (s) { return L(s.name); };
+            f.schema = [{ type: 'grid', name: '', schema: [
+              { name: 'name', selector: { text: {} } }, { name: 'color', selector: { color_rgb: {} } }
+            ] }];
+            f.addEventListener('value-changed', function (ev) {
+              ev.stopPropagation();
+              self._calData[i] = ev.detail.value;
+              var ids = resolveCals(self._config).map(function (x) { return x.id; });
+              var v = Object.assign({}, self._config, { entities: ids, calendars: self._calEntries(ids) });
+              delete v.entity;
+              self._emit(self._clean(v));
+            });
+            row.appendChild(f); rowsEl.appendChild(row);
+            self._calRows.push(f);
+          }
         });
       }
-      if (!this._calData || this._calData.length !== cals.length) this._syncCalData(cals.map(function (x) { return x.id; }));
       cals.forEach(function (cal, i) {
+        var chip = chipsEl.children[i];
+        if (chip) {
+          chip.style.setProperty('--cc', 'rgb(' + cal.color + ')');
+          var s = chip.querySelector('span'); if (s) s.textContent = cal.name || cal.id;
+        }
         var f = self._calRows[i]; if (!f) return;
         f.hass = self._hass;
         f.data = { name: cal.name, color: rgbArr(cal.color) };
