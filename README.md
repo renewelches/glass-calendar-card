@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="docs/screenshot-dark.png" width="480" alt="Dark mode"><br><br>
-  <img src="docs/screenshot-light.png" width="480" alt="Light mode">
+  <img src="docs/screenshot-light.png" width="480" alt="Light mode, two calendars">
 </p>
 
 A weekly calendar agenda for Home Assistant, in the same **liquid glass** style as the
@@ -13,11 +13,11 @@ visual editor.
 It replaces the stock `cal-card` with a card that fits a glass / "Casa Futura" look:
 
 - Events of the next **1–14 days**, grouped by day (Today, Tomorrow, Tue 3 Feb, …)
+- **Multiple calendars** (like the stock card): list several `calendar.` entities — waste, holidays, family, … Each calendar gets its own color automatically (or configure a name and color per calendar), a small dot on every event shows which calendar it comes from, and a legend under the header names them
 - Each event is a pill in the same visual language as the calendar chips of the clock card:
   colored icon with glow, time, title, location
 - Today's events glow a little stronger
-- **Event types**: events whose title matches a pattern get their own label, icon and color
-  (waste collection ready-made, in German, English and Italian)
+- **Event types**: events whose title matches a pattern get their own label, icon and color, independent of the calendar (waste collection ready-made, in German, English and Italian)
 - Standard tap / hold / double-tap actions
 - Events are fetched through Home Assistant's own `calendars` API, cached for 15 minutes
 
@@ -59,7 +59,20 @@ Now the card can be added to the dashboard exactly as with HACS: **Edit dashboar
 
 ```yaml
 type: custom:glass-calendar-card
+# one calendar:
 entity: calendar.waste
+# …or several, like the stock calendar card:
+entities:
+  - calendar.waste
+  - calendar.holidays
+  - calendar.family
+calendars:                # optional: per-calendar display name and color
+  - entity: calendar.waste
+    name: "Müll"
+    color: [170, 182, 200]
+  - entity: calendar.holidays
+    name: "Feiertage"
+    color: [96, 165, 250]
 days: 7
 max_events: 8
 show_location: false
@@ -87,23 +100,26 @@ calendar_types:
     color: [170, 182, 200]
 ```
 
-Everything can also be set in the visual editor: choose your calendar, add event types
-(including one-click waste-collection examples), and tune the appearance to match the
-clock card (accent color, font, glow, corner radius, …).
+Everything can also be set in the visual editor: pick as many calendars as you like, add
+event types (including one-click waste-collection examples), set a name/color per
+calendar, and tune the appearance to match the clock card (accent color, font, glow,
+corner radius, …).
 
 ## Options
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `entity` | entity | **required** | A `calendar.` entity. |
-| `name` | text | from the entity | Card title in the header. |
+| `entity` | entity | | A single `calendar.` entity. |
+| `entities` | list | | Several `calendar.` entities (use this for multiple calendars). Can be combined with `entity`. |
+| `calendars` | list | | Optional per-calendar overrides: `entity`, `name` (display name for the legend), `color`. Without a color, calendars get one from an auto palette. |
+| `name` | text | from the entity | Card title in the header. With multiple calendars the default title is “Calendars”. |
 | `show_header` | boolean | `true` | Title, week range and event count. |
 | `days` | `1`–`14` | `7` | How many days from today are covered. |
 | `max_events` | `1`–`50` | `8` | Maximum events shown per day. |
 | `show_time` | boolean | `true` | Show the start time of timed events. |
 | `show_location` | boolean | `false` | Show the event location, if it has one. |
 | `default_icon` | icon | `mdi:calendar-star` | Icon for events without a matching type. |
-| `default_color` | color | grey | Color for events without a matching type. |
+| `default_color` | color | per-calendar color | Color for events without a matching type. With a single calendar: grey. |
 | `calendar_types` | list | | Each item: `pattern`, `label`, `icon`, `color`. The pattern is searched in the event title case-insensitively; separate alternatives with `|`. |
 | `appearance` | `auto`, `dark`, `light` | `auto` | `auto` follows the dark mode of your theme. |
 | `font` | `space_grotesk`, `theme`, `custom` | `space_grotesk` | Same choices as the clock card, so both cards match. |

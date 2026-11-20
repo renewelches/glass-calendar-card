@@ -79,15 +79,24 @@ const events = [
   ev(de ? 'Versteckt' : 'Hidden event', dts(1, 12, 0), dts(1, 13, 0), null, true)
 ];
 
+const holidayEvents = [
+  de ? ev('Tag der Arbeit', ds(3), ds(4)) : it ? ev('Festa nazionale', ds(3), ds(4)) : ev('National holiday', ds(3), ds(4)),
+  de ? ev('Winterferien beginnen', ds(6), ds(7)) : it ? ev('Inizio vacanze invernali', ds(6), ds(7)) : ev('Winter break starts', ds(6), ds(7))
+];
+
 const hass = {
   language: lang, locale: { language: lang, time_format: Q.get('h12') ? '12' : 'language' },
   themes: { darkMode: !light },
   config: { latitude: 45.46, longitude: 9.19, unit_system: { temperature: '°C' } },
   localize: () => '',
   states: {
-    'calendar.household': { entity_id: 'calendar.household', state: '2', attributes: { friendly_name: de ? 'Haushalt' : it ? 'Casa' : 'Household', calendar: 'google' } }
+    'calendar.household': { entity_id: 'calendar.household', state: '2', attributes: { friendly_name: de ? 'Haushalt' : it ? 'Casa' : 'Household', calendar: 'google' } },
+    'calendar.holidays': { entity_id: 'calendar.holidays', state: '1', attributes: { friendly_name: de ? 'Feiertage' : it ? 'Feste' : 'Holidays', calendar: 'builtin' } }
   },
-  callApi: (method, path) => Promise.resolve(events)
+  callApi: (method, path) => {
+    const which = String(path).split('/')[1].split('?')[0];
+    return Promise.resolve(which === 'calendar.holidays' ? holidayEvents : events);
+  }
 };
 
 const types = de
@@ -106,7 +115,7 @@ const types = de
      { pattern: 'General', label: 'General waste', icon: 'mdi:trash-can-outline', color: [170, 182, 200] }];
 
 const base = {
-  type: 'custom:glass-calendar-card', entity: 'calendar.household',
+  type: 'custom:glass-calendar-card', entities: ['calendar.household', 'calendar.holidays'],
   days: 7, max_events: 8, show_location: true, default_icon: 'mdi:calendar-star', calendar_types: types
 };
 const extra = Q.get('config') ? JSON.parse(Q.get('config')) : {};

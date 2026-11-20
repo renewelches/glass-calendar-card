@@ -98,16 +98,20 @@ const hass = {
   themes: { darkMode: true },
   config: { latitude: 1, longitude: 1, unit_system: { temperature: '°C' } },
   localize: () => '',
-  states: { 'calendar.waste': { entity_id: 'calendar.waste', state: '2', attributes: { friendly_name: 'Waste' } } },
+  states: { 'calendar.waste': { entity_id: 'calendar.waste', state: '2', attributes: { friendly_name: 'Waste' } }, 'calendar.holidays': { entity_id: 'calendar.holidays', state: '1', attributes: { friendly_name: 'Holidays' } } },
   callApi: (method, path) => {
+    const which = String(path).split('/')[1].split('?')[0];
     console.log('  callApi:', method, path);
-    return Promise.resolve(events);
+    return Promise.resolve(which === 'calendar.holidays' ? [
+      { summary: 'National holiday', start: ds(3), end: ds(4) },
+      { summary: 'Winter break starts', start: ds(6), end: ds(7) }
+    ] : events);
   }
 };
 
 card.setConfig({
   type: 'custom:glass-calendar-card',
-  entity: 'calendar.waste',
+  entities: ['calendar.waste', 'calendar.holidays'],
   days: 7, max_events: 8, show_location: true,
   calendar_types: [
     { pattern: 'Yellow', label: 'Yellow bag', icon: 'mdi:bottle-soda-classic-outline', color: [255, 198, 64] },
@@ -118,6 +122,7 @@ card.hass = hass;
 
 setTimeout(() => {
   const list = card.shadowRoot.getElementById('list');
+  const legend = card.shadowRoot.getElementById('legend');
   const out = list.innerHTML;
   const checks = {
     'renders dentist': out.includes('Dentist'),
@@ -129,8 +134,11 @@ setTimeout(() => {
     'hides hidden event': !out.includes('Hidden'),
     'today section marked': out.includes('day today'),
     'tomorrow section labeled': out.includes('Tomorrow') || out.includes('Morgen'),
-    'header title from config': card.shadowRoot.getElementById('ht').textContent === 'Waste',
-    'event count 8': card.shadowRoot.getElementById('count').textContent === '8 events'
+    'applies calendar palette color to untyped cal2 event': out.includes('--c:96,165,250'),
+    'holidays row has a calendar dot': out.includes('cdot'),
+    'legend lists both calendars': legend.innerHTML.includes('Waste') && legend.innerHTML.includes('Holidays'),
+    'header title multi': card.shadowRoot.getElementById('ht').textContent === 'Calendars',
+    'event count 10': card.shadowRoot.getElementById('count').textContent === '10 events'
   };
   let fail = 0;
   for (const k in checks) { console.log((checks[k] ? 'PASS' : 'FAIL') + '  ' + k); if (!checks[k]) fail++; }

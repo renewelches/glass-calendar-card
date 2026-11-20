@@ -1,7 +1,7 @@
 /*!
  * Glass Calendar Card for Home Assistant
  * A weekly calendar agenda in the same liquid glass style as the
- * Glass Clock Weather Card, with color-coded event types.
+ * Glass Clock Weather Card, with color-coded calendars and event types.
  *
  * Released under the MIT License.
  */
@@ -10,7 +10,7 @@
 
   var CARD = 'glass-calendar-card';
   var EDITOR = CARD + '-editor';
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var REPO = 'https://github.com/renewelches/glass-calendar-card';
   if (customElements.get(CARD)) return;
 
@@ -62,9 +62,9 @@
     en: {
       today: 'Today', tomorrow: 'Tomorrow', loading: 'Loading…', noentity: 'Choose a calendar entity',
       empty: 'No events in the next %d days', events: 'events', event: 'event',
-      s_calendar: 'Calendar', s_types: 'Event types', s_look: 'Appearance', s_colors: 'Colors', s_actions: 'Interactions',
-      s_calendar_h: 'A calendar entity of Home Assistant. Its upcoming events are listed day by day.',
-      entity: 'Calendar entity', name: 'Card title (optional)', name_h: 'Default: the name of the calendar.',
+      s_calendar: 'Calendar', s_calendars: 'Calendars', s_types: 'Event types', s_look: 'Appearance', s_colors: 'Colors', s_actions: 'Interactions',
+      s_calendar_h: 'One or more calendar entities of Home Assistant. Their upcoming events are listed day by day.',
+      entities: 'Calendar entities', name: 'Card title (optional)', name_h: 'Default: the name of the calendar.',
       days: 'Number of days', days_h: 'How many days from today are covered.',
       max_events: 'Maximum events per day', show_time: 'Show times', show_location: 'Show locations',
       show_header: 'Show header', default_icon: 'Icon for other events', default_color: 'Color for other events',
@@ -76,6 +76,7 @@
       font_family: 'Custom font family',
       text_scale: 'Text size', text_scale_h: 'Larger values make the card easier to read from a distance.',
       min_height: 'Minimum height',
+      cals_h: 'Display name and color for each calendar. With multiple calendars, every event gets a small dot in its calendar’s color.',
       glass: 'Glass effect', glow: 'Glow intensity', border_radius: 'Corner radius',
       accent_color: 'Accent color', text_color: 'Text color',
       background_color: 'Background tint', background_opacity: 'Tint strength', reset_colors: 'Reset colors',
@@ -84,9 +85,9 @@
     de: {
       today: 'Heute', tomorrow: 'Morgen', loading: 'Lade…', noentity: 'Wähle eine Kalender-Einheit',
       empty: 'Keine Ereignisse in den nächsten %d Tagen', events: 'Ereignisse', event: 'Ereignis',
-      s_calendar: 'Kalender', s_types: 'Ereignistypen', s_look: 'Aussehen', s_colors: 'Farben', s_actions: 'Bedienung',
-      s_calendar_h: 'Eine Kalender-Einheit von Home Assistant. Ihre bevorstehenden Ereignisse werden Tag für Tag aufgelistet.',
-      entity: 'Kalender-Einheit', name: 'Karten-Titel (optional)', name_h: 'Standard: der Name des Kalenders.',
+      s_calendar: 'Kalender', s_calendars: 'Kalender', s_types: 'Ereignistypen', s_look: 'Aussehen', s_colors: 'Farben', s_actions: 'Bedienung',
+      s_calendar_h: 'Eine oder mehrere Kalender-Einheiten von Home Assistant. Ihre bevorstehenden Ereignisse werden Tag für Tag aufgelistet.',
+      entities: 'Kalender-Einheiten', name: 'Karten-Titel (optional)', name_h: 'Standard: der Name des Kalenders.',
       days: 'Anzahl Tage', days_h: 'Wie viele Tage ab heute abgedeckt werden.',
       max_events: 'Max. Ereignisse pro Tag', show_time: 'Uhrzeiten anzeigen', show_location: 'Orte anzeigen',
       show_header: 'Kopfzeile anzeigen', default_icon: 'Symbol für andere Ereignisse', default_color: 'Farbe für andere Ereignisse',
@@ -98,6 +99,7 @@
       font_family: 'Eigene Schriftfamilie',
       text_scale: 'Textgröße', text_scale_h: 'Größere Werte machen die Karte auch aus der Entfernung lesbar.',
       min_height: 'Minimale Höhe',
+      cals_h: 'Anzeigename und Farbe für jeden Kalender. Bei mehreren Kalendern erhält jedes Ereignis einen Punkt in der Farbe seines Kalenders.',
       glass: 'Glas-Effekt', glow: 'Leuchtstärke', border_radius: 'Eckenradius',
       accent_color: 'Akzentfarbe', text_color: 'Textfarbe',
       background_color: 'Hintergrundtönung', background_opacity: 'Tönungsstärke', reset_colors: 'Farben zurücksetzen',
@@ -106,9 +108,9 @@
     it: {
       today: 'Oggi', tomorrow: 'Domani', loading: 'Carico…', noentity: 'Scegli un’entità calendario',
       empty: 'Nessun evento nei prossimi %d giorni', events: 'eventi', event: 'evento',
-      s_calendar: 'Calendario', s_types: 'Tipi di evento', s_look: 'Aspetto', s_colors: 'Colori', s_actions: 'Interazioni',
-      s_calendar_h: 'Un’entità calendario di Home Assistant. I suoi eventi in arrivo sono elencati giorno per giorno.',
-      entity: 'Entità calendario', name: 'Titolo della card (facoltativo)', name_h: 'Predefinito: il nome del calendario.',
+      s_calendar: 'Calendario', s_calendars: 'Calendari', s_types: 'Tipi di evento', s_look: 'Aspetto', s_colors: 'Colori', s_actions: 'Interazioni',
+      s_calendar_h: 'Una o più entità calendario di Home Assistant. I loro eventi in arrivo sono elencati giorno per giorno.',
+      entities: 'Entità calendario', name: 'Titolo della card (facoltativo)', name_h: 'Predefinito: il nome del calendario.',
       days: 'Numero di giorni', days_h: 'Quanti giorni a partire da oggi sono coperti.',
       max_events: 'Numero massimo di eventi per giorno', show_time: 'Mostra gli orari', show_location: 'Mostra i luoghi',
       show_header: 'Mostra l’intestazione', default_icon: 'Icona per gli altri eventi', default_color: 'Colore per gli altri eventi',
@@ -120,6 +122,7 @@
       font_family: 'Nome del carattere',
       text_scale: 'Grandezza dei testi', text_scale_h: 'Valori più alti rendono la card leggibile anche da lontano.',
       min_height: 'Altezza minima',
+      cals_h: 'Nome e colore per ogni calendario. Con più calendari, ogni evento porta un punto nel colore del suo calendario.',
       glass: 'Effetto vetro', glow: 'Intensità del bagliore', border_radius: 'Raggio degli angoli',
       accent_color: 'Colore principale', text_color: 'Colore dei testi',
       background_color: 'Tinta dello sfondo', background_opacity: 'Intensità della tinta', reset_colors: 'Ripristina i colori',
@@ -157,8 +160,35 @@
     return isNaN(d) ? null : d;
   }
 
-  // group the fetched events by day, capped per day
-  function calItems(events, c, l) {
+  // auto-assigned color for a calendar that has none of its own
+  var CAL_PALETTE = [[95, 243, 255], [96, 165, 250], [255, 198, 64], [92, 210, 120], [230, 120, 220], [167, 139, 250], [255, 140, 105], [120, 220, 200]];
+  function normId(x) {
+    x = String(x || '').trim();
+    if (!x) return null;
+    return x.indexOf('calendar.') === 0 ? x : 'calendar.' + x;
+  }
+  // resolve entity / entities / calendars into a flat list of {id, name, color}
+  function resolveCals(c) {
+    var ids = [];
+    [c.entity].concat(Array.isArray(c.entities) ? c.entities : []).forEach(function (x) {
+      var id = normId(x);
+      if (id && ids.indexOf(id) < 0) ids.push(id);
+    });
+    var cfgs = Array.isArray(c.calendars) ? c.calendars : [];
+    return ids.map(function (id, i) {
+      var m = null;
+      cfgs.forEach(function (m2) { if (m2 && normId(m2.entity) === id) m = m2; });
+      var color = m && m.color ? rgb(m.color, null) : null;
+      return {
+        id: id,
+        name: (m && m.name) || '',
+        color: color || CAL_PALETTE[i % CAL_PALETTE.length].join(',')
+      };
+    });
+  }
+
+  // group the fetched events by day, capped per day; events carry their calendar index (ev._cal)
+  function calItems(events, c, l, cals) {
     var t0 = new Date(); t0.setHours(0, 0, 0, 0);
     var days = clamp(parseInt(c.days, 10) || 7, 1, 14);
     var types = Array.isArray(c.calendar_types) ? c.calendar_types : [];
@@ -183,11 +213,14 @@
       var time = (!allDay && c.show_time !== false)
         ? s.toLocaleTimeString(l, { hour: '2-digit', minute: '2-digit', hourCycle: 'h24' })
         : '';
+      var cal = (cals || [])[ev._cal] || { color: null };
+      var fallback = rgb(c.default_color, '170,182,200');
       var item = {
         day: idx, time: time, label: (hit && hit.label) || sum,
         location: c.show_location ? (ev.location || '') : '',
         icon: (hit && hit.icon) || c.default_icon || 'mdi:calendar-star',
-        color: rgb(hit && hit.color, rgb(c.default_color, '170,182,200')),
+        color: hit ? rgb(hit.color, fallback) : rgb(cal.color, fallback),
+        cal: ev._cal | 0, ccolor: cal.color,
         sort: s.getTime()
       };
       if (!byDay[idx]) byDay[idx] = [];
@@ -200,7 +233,7 @@
   /* ================================================================ styles */
 
   var DEF = {
-    entity: null, name: '', show_header: true, days: 7, max_events: 8, show_time: true, show_location: false,
+    entity: null, entities: [], calendars: [], name: '', show_header: true, days: 7, max_events: 8, show_time: true, show_location: false,
     default_icon: 'mdi:calendar-star', default_color: null, calendar_types: [],
     appearance: 'auto', font: 'space_grotesk', font_family: '', text_scale: 1, min_height: 320,
     accent_color: null, text_color: null,
@@ -270,6 +303,12 @@
     '.evrow .lab{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.evrow .loc{flex:none;max-width:45%;font-size:calc(14px * var(--s));opacity:.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.evrow.all .lab{opacity:.85;font-weight:400}' +
+    /* a dot marks which calendar an event comes from (multiple calendars) */
+    '.cdot{width:calc(9px * var(--s));height:calc(9px * var(--s));border-radius:50%;flex:none;box-shadow:0 0 6px currentcolor}' +
+    '.legend{display:flex;flex-wrap:wrap;align-items:center;gap:calc(6px * var(--s)) calc(14px * var(--s));flex:none;margin:-4px 0 calc(12px * var(--s));' +
+    '  font-size:calc(13px * var(--s));opacity:.72}' +
+    '.legend .li{display:inline-flex;align-items:center;gap:calc(7px * var(--s));white-space:nowrap;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}' +
+    '.legend .cdot{box-shadow:none}' +
     /* today's events glow a little stronger */
     '.day.today .evrow{background:linear-gradient(160deg,rgba(var(--c),.42),rgba(var(--c),.14));border-color:rgba(var(--c),.85);' +
     '  box-shadow:0 0 22px rgba(var(--c),calc(var(--gcal-ga) * .9)),inset 0 1px 0 rgba(255,255,255,.28)}' +
@@ -293,8 +332,9 @@
     setConfig(config) {
       if (!config || typeof config !== 'object') throw new Error('Invalid configuration');
       var c = Object.assign({}, DEF, config);
-      if (!c.entity) throw new Error('entity: a calendar entity (calendar.x) is required');
-      if (String(c.entity).indexOf('calendar.') !== 0) c.entity = 'calendar.' + c.entity;
+      c._cals = resolveCals(c);
+      if (!c._cals.length) throw new Error('entity or entities: at least one calendar entity (calendar.x) is required');
+      if (!c.entity) c.entity = c._cals[0].id;
       c.days = clamp(parseInt(c.days, 10) || 7, 1, 14);
       c.max_events = clamp(parseInt(c.max_events, 10) || 8, 1, 50);
       this._config = c;
@@ -331,9 +371,11 @@
     _$(id) { return this.shadowRoot.getElementById(id); }
 
     _changed(old) {
-      var e = this._config.entity;
-      if (e && old.states[e] !== this._hass.states[e]) return true;
-      return langOf(old) !== langOf(this._hass);
+      var c = this._config;
+      if (c) c._cals.forEach(function (cal) {
+        if (old.states[cal.id] !== this._hass.states[cal.id]) this._dirty = true;
+      }, this);
+      return this._dirty === true || langOf(old) !== langOf(this._hass);
     }
 
     _build() {
@@ -346,6 +388,7 @@
         '<div class="ht" id="ht"></div>' +
         '<div class="hr"><span class="range" id="range"></span><span class="chip n" id="count" hidden></span></div>' +
         '</div>' +
+        '<div class="legend" id="legend" hidden></div>' +
         '<div class="list" id="list"><div class="msg" id="msg">' + esc(tr(langOf(this._hass), 'loading')) + '</div></div>' +
         '</ha-card>';
       this._built = true;
@@ -465,8 +508,15 @@
     _slow() {
       var self = this, c = this._config, k = dayKey(new Date());
       this._cday = k;
-      calFetch(this._hass, c.entity, c.days).then(function (ev) {
-        self._items = calItems(ev, self._config, langOf(self._hass));
+      this._dirty = false;
+      Promise.all(c._cals.map(function (cal, ci) {
+        return calFetch(self._hass, cal.id, c.days).then(function (ev) {
+          return (ev || []).map(function (e) { e._cal = ci; return e; });
+        });
+      })).then(function (lists) {
+        var ev = [];
+        lists.forEach(function (l) { ev = ev.concat(l); });
+        self._items = calItems(ev, self._config, langOf(self._hass), self._config._cals);
         self._render();
       });
     }
@@ -496,16 +546,29 @@
     _render() {
       if (!this._built) return;
       var c = this._config, l = langOf(this._hass);
-      var hdr = this._$('hdr'), ht = this._$('ht'), range = this._$('range'), count = this._$('count');
+      var hdr = this._$('hdr'), ht = this._$('ht'), range = this._$('range'), count = this._$('count'), legend = this._$('legend');
       if (!hdr) return;
       hdr.hidden = c.show_header === false;
-      if (hdr.hidden) return;
-      var st2 = st(this._hass, c.entity);
-      ht.textContent = c.name || (st2 && st2.attributes && st2.attributes.friendly_name) || st2 && st2.name || tr(l, 's_calendar');
-      range.textContent = this._rangeLabel(l);
-      var n = this._items ? this._items.total : 0;
-      count.hidden = !n;
-      if (n) count.textContent = n + ' ' + (n === 1 ? tr(l, 'event') : tr(l, 'events'));
+      if (!hdr.hidden) {
+        var multi = c._cals.length > 1;
+        var st2 = st(this._hass, c.entity);
+        var friendly = st2 && st2.attributes && st2.attributes.friendly_name;
+        ht.textContent = c.name || (!multi && friendly) || tr(l, multi ? 's_calendars' : 's_calendar');
+        range.textContent = this._rangeLabel(l);
+        var n = this._items ? this._items.total : 0;
+        count.hidden = !n;
+        if (n) count.textContent = n + ' ' + (n === 1 ? tr(l, 'event') : tr(l, 'events'));
+        if (legend) {
+          if (multi) {
+            legend.hidden = false;
+            legend.innerHTML = c._cals.map(function (cal) {
+              var nm = st(this._hass, cal.id);
+              nm = (cal.name || (nm && nm.attributes && nm.attributes.friendly_name)) || cal.id.replace(/^calendar\./, '');
+              return '<span class="li"><i class="cdot" style="background:rgb(' + cal.color + ')"></i>' + esc(nm) + '</span>';
+            }, this).join('');
+          } else legend.hidden = true;
+        }
+      }
       this._renderList();
     }
 
@@ -522,13 +585,15 @@
         return;
       }
       var html = '';
+      var multi = c._cals.length > 1;
       for (var i = 0; i < c.days; i++) {
         var list = items.days[i];
         if (!list || !list.length) continue;
         html += '<div class="day' + (i === 0 ? ' today' : '') + '">' +
           '<div class="dlabel"><span class="dot"></span>' + esc(this._dayLabel(l, i)) + (i > 0 ? '' : '<span class="dt">' + new Date().toLocaleDateString(l, { day: 'numeric', month: 'short' }) + '</span>') + '</div>' +
           '<div class="evs">' + list.map(function (t) {
-            return '<div class="evrow' + (t.time ? '' : ' all') + '" style="--c:' + t.color + '">' +
+            var dot = multi && t.ccolor ? '<i class="cdot" style="background:rgb(' + t.ccolor + ');color:rgb(' + t.ccolor + ')"></i>' : '';
+            return '<div class="evrow' + (t.time ? '' : ' all') + '" style="--c:' + t.color + '">' + dot +
               '<ha-icon icon="' + esc(t.icon) + '"></ha-icon>' +
               (t.time ? '<span class="time">' + esc(t.time) + '</span>' : '') +
               '<span class="lab">' + esc(t.label) + '</span>' +
@@ -601,6 +666,7 @@
       this._hass = h;
       if (this._form) this._form.hass = h;
       (this._rows || []).forEach(function (r) { r.hass = h; });
+      (this._calRows || []).forEach(function (r) { r.hass = h; });
       if (!this._form) this._draw();
     }
     connectedCallback() { this._draw(); }
@@ -614,11 +680,12 @@
 
     _schema() {
       var c = this._config, L = this._L.bind(this), sel = function (o) { return { select: { mode: 'dropdown', options: o } }; };
+      var n = resolveCals(c).length;
       var calendar = [
-        { name: 'entity', selector: { entity: { filter: { domain: 'calendar' } } } },
+        { name: 'entities', selector: { entity: { filter: { domain: 'calendar' }, multiple: true } } },
         { name: 'name', selector: { text: {} } }
       ];
-      if (c.entity) {
+      if (n > 0) {
         calendar.push({ name: 'days', selector: { number: { min: 1, max: 14, step: 1, mode: 'slider', unit_of_measurement: L('days') } } });
         calendar.push({ type: 'grid', name: '', schema: [
           { name: 'max_events', selector: { number: { min: 1, max: 50, step: 1, mode: 'box' } } },
@@ -655,7 +722,7 @@
       if (c.background_color) colors.push({ name: 'background_opacity', selector: { number: { min: 0, max: 1, step: 0.05, mode: 'slider' } } });
 
       var actions = [
-        { name: 'tap_action', selector: { ui_action: { default_action: c.entity ? 'more-info' : 'none' } } },
+        { name: 'tap_action', selector: { ui_action: { default_action: n > 0 ? 'more-info' : 'none' } } },
         { name: 'hold_action', selector: { ui_action: { default_action: 'none' } } },
         { name: 'double_tap_action', selector: { ui_action: { default_action: 'none' } } }
       ];
@@ -676,6 +743,7 @@
       Object.keys(DEF).forEach(function (k) { if (DEF[k] != null) d[k] = DEF[k]; });
       COLOR_KEYS.forEach(function (k) { d[k] = P[k]; });
       d = Object.assign(d, c);
+      d.entities = resolveCals(this._config).map(function (x) { return x.id; });
       COLOR_KEYS.concat(['background_color', 'default_color']).forEach(function (k) {
         if (c[k] != null) d[k] = rgbArr(rgb(c[k], (P[k] || [0, 0, 0]).join(',')));
       });
@@ -689,10 +757,19 @@
         var x = v[k];
         if (x === undefined || x === null || x === '') return;
         if (k === 'type' || k === 'calendar_types') { out[k] = x; return; }
+        if (k === 'entities') {
+          if (Array.isArray(x) && x.length) out[k] = x;
+          return;
+        }
+        if (k === 'calendars') {
+          if (Array.isArray(x) && x.length) out[k] = x;
+          return;
+        }
         if (COLOR_KEYS.indexOf(k) >= 0 && P[k] && same(rgbArr(rgb(x, '')), P[k])) return;
         if (k in DEF && same(x, DEF[k])) return;
         out[k] = x;
       });
+      if ('entities' in v && Array.isArray(v.entities)) delete out.entity; // the editor speaks “entities”
       if (Array.isArray(out.calendar_types) && !out.calendar_types.length) delete out.calendar_types;
       return out;
     }
@@ -726,8 +803,9 @@
           'button.b ha-icon{--mdc-icon-size:18px}' +
           'button.icon{border:0;background:none;cursor:pointer;color:var(--secondary-text-color);padding:6px;border-radius:50%}' +
           'button.icon:hover{color:var(--error-color, #db4437);background:var(--secondary-background-color)}' +
+          '.calid{font-size:12px;color:var(--secondary-text-color);font-family:var(--ha-font-family-monospace, monospace);margin:0 0 6px}' +
           '.foot{font-size:12px;color:var(--secondary-text-color);text-align:right}.foot a{color:inherit}' +
-          '</style><div class="box"><div id="form"></div><div id="types"></div>' +
+          '</style><div class="box"><div id="form"></div><div id="cals"></div><div id="types"></div>' +
           '<div class="foot">Glass Calendar Card ' + VERSION + ' · <a href="' + REPO + '" target="_blank" rel="noreferrer">GitHub</a></div></div>';
         this._form = document.createElement('ha-form');
         this._form.computeLabel = function (s) { return s.title || L(s.name); };
@@ -739,6 +817,11 @@
         this._form.addEventListener('value-changed', function (ev) {
           ev.stopPropagation();
           var v = Object.assign({}, self._config, ev.detail.value);
+          if (Array.isArray(v.entities)) {
+            delete v.entity;
+            self._syncCalData(v.entities);
+            v.calendars = self._calEntries(v.entities);
+          }
           self._emit(self._clean(v));
         });
         this._root.getElementById('form').appendChild(this._form);
@@ -746,12 +829,88 @@
       this._form.hass = this._hass;
       this._form.schema = this._schema();
       this._form.data = this._data();
+      this._drawCals();
       this._drawTypes();
+    }
+
+    /* ---------- per-calendar name & color (only useful with multiple calendars) */
+    _syncCalData(ids) {
+      var c = this._config, old = {}, i;
+      var oldIds = resolveCals(c).map(function (x) { return x.id; });
+      var cfgs = Array.isArray(c.calendars) ? c.calendars : [];
+      for (i = 0; i < oldIds.length; i++) {
+        (function (id) {
+          var e = null;
+          cfgs.forEach(function (m) { if (m && normId(m.entity) === id) e = m; });
+          old[id] = { name: (e && e.name) || '', color: e && e.color ? rgbArr(rgb(e.color, null)) : null };
+        })(oldIds[i]);
+      }
+      this._calData = ids.map(function (id) {
+        return old[id] || { name: '', color: null };
+      });
+    }
+    _calEntries(ids) {
+      var out = [];
+      (ids || []).forEach(function (id, i) {
+        var d = this._calData[i] || {}, e = { entity: id };
+        if (d.name) e.name = d.name;
+        if (d.color) {
+          var pal = CAL_PALETTE[i % CAL_PALETTE.length].join(',');
+          if (rgbArr(d.color).join(',') !== pal) e.color = d.color;
+        }
+        if (Object.keys(e).length > 1) out.push(e);
+      }, this);
+      return out;
+    }
+    _drawCals() {
+      var self = this, L = this._L.bind(this), host = this._root.getElementById('cals'), c = this._config;
+      var cals = resolveCals(c);
+      var key = cals.map(function (x) { return x.id; }).join(',');
+      if (cals.length < 2) { host.innerHTML = ''; this._calRows = []; this._calsPanel = null; this._calKey = null; return; }
+      if (!this._calsPanel || !host.contains(this._calsPanel)) {
+        host.innerHTML = '';
+        var p = document.createElement('ha-expansion-panel');
+        p.outlined = true; p.header = L('s_calendars');
+        p.innerHTML = '<div class="types"><p class="help">' + esc(L('cals_h')) + '</p><div id="rows"></div></div>';
+        host.appendChild(p);
+        this._calsPanel = p; this._calKey = null;
+      }
+      var rowsEl = this._calsPanel.querySelector('#rows');
+      if (this._calKey !== key) {
+        this._calKey = key;
+        rowsEl.innerHTML = ''; this._calRows = [];
+        cals.forEach(function (cal, i) {
+          var row = document.createElement('div'); row.className = 'row';
+          var id = document.createElement('p'); id.className = 'calid'; id.textContent = cal.id; row.appendChild(id);
+          var f = document.createElement('ha-form');
+          f.hass = self._hass;
+          f.computeLabel = function (s) { return L(s.name); };
+          f.schema = [{ type: 'grid', name: '', schema: [
+            { name: 'name', selector: { text: {} } }, { name: 'color', selector: { color_rgb: {} } }
+          ] }];
+          f.addEventListener('value-changed', function (ev) {
+            ev.stopPropagation();
+            self._calData[i] = ev.detail.value;
+            var ids = resolveCals(self._config).map(function (x) { return x.id; });
+            var v = Object.assign({}, self._config, { entities: ids, calendars: self._calEntries(ids) });
+            delete v.entity;
+            self._emit(self._clean(v));
+          });
+          row.appendChild(f); rowsEl.appendChild(row);
+          self._calRows.push(f);
+        });
+      }
+      if (!this._calData || this._calData.length !== cals.length) this._syncCalData(cals.map(function (x) { return x.id; }));
+      cals.forEach(function (cal, i) {
+        var f = self._calRows[i]; if (!f) return;
+        f.hass = self._hass;
+        f.data = { name: cal.name, color: rgbArr(cal.color) };
+      });
     }
 
     _drawTypes() {
       var self = this, L = this._L.bind(this), host = this._root.getElementById('types'), c = this._config;
-      if (!c.entity) { host.innerHTML = ''; this._rows = []; this._typesPanel = null; return; }
+      if (!resolveCals(c).length) { host.innerHTML = ''; this._rows = []; this._typesPanel = null; return; }
       var types = Array.isArray(c.calendar_types) ? c.calendar_types : [];
       if (!this._typesPanel || !host.contains(this._typesPanel)) {
         host.innerHTML = '';
