@@ -10,7 +10,7 @@
 
   var CARD = 'glass-calendar-card';
   var EDITOR = CARD + '-editor';
-  var VERSION = '1.1.1';
+  var VERSION = '1.1.2';
   var REPO = 'https://github.com/renewelches/glass-calendar-card';
   if (customElements.get(CARD)) return;
 
@@ -670,8 +670,10 @@
       if (this._form) this._form.hass = h;
       (this._rows || []).forEach(function (r) { r.hass = h; });
       (this._calRows || []).forEach(function (r) { r.hass = h; });
-      var pick = this._calsPanel ? this._calsPanel.querySelector('#pick') : null;
-      if (pick) pick.hass = h;
+      if (this._calsPanel) {
+        var pick = this._calsPanel.querySelector('#pick');
+        if (pick) { pick.hass = h; pick.domain = 'calendar'; }
+      }
       if (!this._form) this._draw();
     }
     connectedCallback() { this._draw(); }
@@ -878,6 +880,14 @@
       v.calendars = this._calEntries(ids);
       this._emit(this._clean(v));
     }
+    _addCal(id) {
+      id = normId(id);
+      if (!id) return false;
+      var ids = resolveCals(this._config).map(function (x) { return x.id; });
+      if (ids.indexOf(id) < 0) ids.push(id);
+      this._setCals(ids);
+      return true;
+    }
     _drawCals() {
       var self = this, L = this._L.bind(this), host = this._root.getElementById('cals'), c = this._config;
       var cals = resolveCals(c);
@@ -888,25 +898,27 @@
         var p = document.createElement('ha-expansion-panel');
         p.outlined = true; p.expanded = true; p.header = L('s_calendars');
         p.innerHTML = '<div class="types"><div id="chips"></div>' +
-          '<div class="addrow"><div class="grow"><ha-selector-entity id="pick"></ha-selector-entity></div>' +
+          '<div class="addrow"><div class="grow"><ha-entity-picker id="pick" allow-custom-entity></ha-entity-picker></div>' +
           '<button class="b" id="addc"><ha-icon icon="mdi:plus"></ha-icon>' + esc(L('add_calendar')) + '</button></div>' +
           '<p class="help" id="chelp">' + esc(L('cals_h')) + '</p><div id="rows"></div></div>';
         host.appendChild(p);
         this._calsPanel = p; this._calKey = null;
+        // the picker reports its choice via value-changed (reliable across HA versions);
+        // the button is a fallback that reads the same value
+        p.querySelector('#pick').addEventListener('value-changed', function (ev) {
+          ev.stopPropagation();
+          self._calPickId = ev.detail.value;
+          if (self._calPickId && self._addCal(self._calPickId)) { self._calPickId = null; ev.target.value = ''; }
+        });
         p.querySelector('#addc').addEventListener('click', function () {
-          var pick = p.querySelector('#pick');
-          var id = normId(pick.value);
-          if (!id) return;
-          var ids = resolveCals(self._config).map(function (x) { return x.id; });
-          if (ids.indexOf(id) < 0) ids.push(id);
-          self._setCals(ids);
-          pick.value = '';
+          var id = p.querySelector('#pick').value || self._calPickId;
+          if (!self._addCal(id)) { self._calPickId = null; console.info('Glass Calendar Card: pick a calendar first'); }
         });
       }
       var pick = this._calsPanel.querySelector('#pick');
       pick.hass = this._hass;
-      pick.label = L('add_calendar');
-      pick.selector = { filter: { domain: 'calendar' } };
+      pick.domain = 'calendar';
+      if ('label' in pick) pick.label = L('add_calendar');
       if (!pick.value) pick.value = '';
       this._calsPanel.querySelector('#chelp').style.display = cals.length > 1 ? '' : 'none';
       var chipsEl = this._calsPanel.querySelector('#chips');
