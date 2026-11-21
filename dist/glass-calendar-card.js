@@ -10,7 +10,7 @@
 
   var CARD = 'glass-calendar-card';
   var EDITOR = CARD + '-editor';
-  var VERSION = '1.1.3';
+  var VERSION = '1.1.4';
   var REPO = 'https://github.com/renewelches/glass-calendar-card';
   if (customElements.get(CARD)) return;
 
@@ -670,6 +670,12 @@
     setConfig(config) {
       this._config = Object.assign({}, config || {});
       this._draw();
+    }
+    set config(config) {
+      if (config) this.setConfig(config);
+    }
+    get config() {
+      return this._config;
     }
     set hass(h) {
       this._hass = h;
