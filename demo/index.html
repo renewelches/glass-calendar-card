@@ -188,7 +188,9 @@ const hass = {
   localize: () => '',
   states: {
     'calendar.household': { entity_id: 'calendar.household', state: '2', attributes: { friendly_name: de ? 'Haushalt' : it ? 'Casa' : 'Household', calendar: 'google' } },
-    'calendar.holidays': { entity_id: 'calendar.holidays', state: '1', attributes: { friendly_name: de ? 'Feiertage' : it ? 'Feste' : 'Holidays', calendar: 'builtin' } }
+    'calendar.holidays': { entity_id: 'calendar.holidays', state: '1', attributes: { friendly_name: de ? 'Feiertage' : it ? 'Feste' : 'Holidays', calendar: 'builtin' } },
+    'calendar.team': { entity_id: 'calendar.team', state: 'off', attributes: { friendly_name: 'Office & Team' } },
+    'sensor.office': { entity_id: 'sensor.office', state: 'on', attributes: { friendly_name: 'Office', domain: 'calendar' } }
   },
   callApi: (method, path) => {
     const which = String(path).split('/')[1].split('?')[0];
@@ -237,21 +239,58 @@ s.onload = () => {
   ed.config = Object.assign({}, base);
   ed.hass = hass;
   if (Q.get('autotest')) {
-    setTimeout(() => {
+    queueMicrotask(async () => {
       try {
-        const inp = ed._root && ed._root.getElementById('pick');
-        if (!inp) throw new Error('no pick input found');
-        inp.value = 'calendar.extra_test';
-        inp.dispatchEvent(new Event('input'));
-        ed._root.getElementById('addc').click();
-        setTimeout(() => {
-          const chips = ed._root.querySelectorAll('#cals .chip').length;
-          const ents = JSON.stringify((ed._config || {}).entities);
-          console.log('AUTOTEST chips=' + chips + ' entities=' + ents);
-          document.title = 'AUTOTEST chips=' + chips + ' entities=' + ents;
-        }, 100);
-      } catch (e) { console.log('AUTOTEST_ERR ' + e.message); document.title = 'AUTOTEST_ERR ' + e.message; }
-    }, 400);
+        const root = ed.shadowRoot;
+        const inp = root.getElementById('pick');
+        const results = root.getElementById('cal-results');
+        const add = root.getElementById('addc');
+        const error = root.getElementById('cal-error');
+        const assert = (ok, msg) => { if (!ok) throw new Error(msg); };
+        const type = (value) => { inp.value = value; inp.dispatchEvent(new Event('input')); };
+        const changes = [];
+        ed.addEventListener('config-changed', (ev) => {
+          changes.push(ev.detail.config);
+          ed.setConfig(ev.detail.config);
+        });
+        const calendars = [{ entity: 'calendar.household', name: 'Home', color: [12, 34, 56] }];
+        ed.setConfig({ ...base, calendars });
+
+        add.click();
+        assert(!results.hidden && results.querySelectorAll('button').length === 1, 'Add did not show available calendars');
+        type('calendar.te');
+        assert(results.querySelector('[data-entity="calendar.team"]'), 'missing entity ID match');
+        type('OFFICE');
+        assert(results.querySelectorAll('button').length === 1, 'expected a single calendar match by friendly name');
+        const result = results.querySelector('[data-entity="calendar.team"]');
+        assert(result && result.textContent.includes('Office & Team'), 'missing friendly name match');
+        result.click();
+        assert(changes.length === 1 && changes[0].entities.includes('calendar.team'), 'search result not added');
+        assert(inp.value === '' && results.hidden, 'search not reset after adding');
+        type('office');
+        assert(!results.querySelector('button'), 'already selected calendar is still suggested');
+
+        type('sensor.office');
+        add.click();
+        assert(changes.length === 1 && error.textContent, 'invalid input was not rejected visibly');
+        type('calendar.team');
+        add.click();
+        assert(changes.length === 1 && error.textContent, 'duplicate input was not rejected visibly');
+
+        type(' calendar.extra_test ');
+        inp.dispatchEvent(new Event('change'));
+        assert(changes.length === 1, 'typing alone unexpectedly changed the config');
+        add.click();
+        assert(changes.length === 2 && changes[1].entities.includes('calendar.extra_test'), 'Add button did not save calendar');
+        type('calendar.keyboard');
+        inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+        assert(changes.length === 3 && changes[2].entities.includes('calendar.keyboard'), 'Enter did not save calendar');
+        assert(JSON.stringify(changes[2].calendars) === JSON.stringify(calendars), 'existing calendar settings were lost');
+        await Promise.resolve();
+        assert(root.querySelectorAll('#cals .chip').length === 5, 'added calendars did not render');
+        document.title = 'AUTOTEST PASS';
+      } catch (e) { console.error(e); document.title = 'AUTOTEST_ERR ' + e.message; }
+    });
   }
 };
 document.head.appendChild(s);

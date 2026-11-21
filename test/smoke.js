@@ -10,6 +10,7 @@ class FakeEl {
     this._listeners = {};
     this.innerHTML = '';
     this.textContent = '';
+    this.value = '';
     this.hidden = false;
     this.clientWidth = 800;
     this.scrollHeight = 0;
@@ -19,12 +20,38 @@ class FakeEl {
   appendChild(c) { this.children.push(c); return c; }
   addEventListener(t, f) { (this._listeners[t] = this._listeners[t] || []).push(f); }
   removeEventListener() {}
-  dispatchEvent() { return true; }
-  querySelector() { return null; }
-  contains() { return false; }
+  dispatchEvent(ev) {
+    (this._listeners[ev.type] || []).forEach((f) => f.call(this, ev));
+    return true;
+  }
+  focus() {}
+  querySelector(sel) {
+    if (sel.startsWith('#')) {
+      const id = sel.slice(1);
+      if (this._id === id) return this;
+      if (this._byId && this._byId.has(id)) return this._byId.get(id);
+    }
+    for (const c of this.children) {
+      const hit = c.querySelector(sel);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  contains(node) { return node === this || this.children.some((c) => c.contains(node)); }
   get firstElementChild() { return this.children[0] || null; }
   set id(v) { this._id = v; }
   get id() { return this._id; }
+  set innerHTML(v) {
+    this._html = String(v);
+    this._byId = new Map();
+    (this._html.match(/id="([^"]+)"/g) || []).forEach((m) => {
+      const id = m.slice(4, -1);
+      const el = new FakeEl();
+      el.id = id;
+      this._byId.set(id, el);
+    });
+  }
+  get innerHTML() { return this._html || ''; }
 }
 class FakeShadowRoot {
   constructor() { this._byId = new Map(); this._html = ''; }
@@ -47,7 +74,10 @@ class FakeHTMLElement {
   disconnectedCallback() {}
   addEventListener(t, f) { (this._listeners[t] = this._listeners[t] || []).push(f); }
   removeEventListener() {}
-  dispatchEvent() { return true; }
+  dispatchEvent(ev) {
+    (this._listeners[ev.type] || []).forEach((f) => f.call(this, ev));
+    return true;
+  }
   setAttribute() {}
 }
 const defined = {};
@@ -98,7 +128,12 @@ const hass = {
   themes: { darkMode: true },
   config: { latitude: 1, longitude: 1, unit_system: { temperature: '°C' } },
   localize: () => '',
-  states: { 'calendar.waste': { entity_id: 'calendar.waste', state: '2', attributes: { friendly_name: 'Waste' } }, 'calendar.holidays': { entity_id: 'calendar.holidays', state: '1', attributes: { friendly_name: 'Holidays' } } },
+  states: {
+    'calendar.waste': { entity_id: 'calendar.waste', state: '2', attributes: { friendly_name: 'Waste' } },
+    'calendar.holidays': { entity_id: 'calendar.holidays', state: '1', attributes: { friendly_name: 'Holidays' } },
+    'calendar.team': { entity_id: 'calendar.team', state: 'off', attributes: { friendly_name: 'Office & Team' } },
+    'sensor.office': { entity_id: 'sensor.office', state: 'on', attributes: { friendly_name: 'Office', domain: 'calendar' } }
+  },
   callApi: (method, path) => {
     const which = String(path).split('/')[1].split('?')[0];
     console.log('  callApi:', method, path);
@@ -120,7 +155,52 @@ card.setConfig({
 });
 card.hass = hass;
 
+const Editor = defined['glass-calendar-card-editor'];
+const ed = new Editor();
+const edChanges = [];
+const savedCals = [{ entity: 'calendar.waste', name: 'Bins', color: [12, 34, 56] }];
+ed.addEventListener('config-changed', (ev) => {
+  edChanges.push(ev.detail.config);
+  ed.setConfig(ev.detail.config);
+});
+ed.setConfig({ type: 'custom:glass-calendar-card', entities: ['calendar.waste', 'calendar.holidays'], calendars: savedCals });
+ed.hass = hass;
+
 setTimeout(() => {
+  const pick = ed.shadowRoot.getElementById('cals').querySelector('#pick');
+  const results = ed.shadowRoot.getElementById('cals').querySelector('#cal-results');
+  const addc = ed.shadowRoot.getElementById('cals').querySelector('#addc');
+  const err = ed.shadowRoot.getElementById('cals').querySelector('#cal-error');
+  const type = (v) => { pick.value = v; pick.dispatchEvent({ type: 'input' }); };
+
+  addc.dispatchEvent({ type: 'click' });
+  const opensOnEmptyAdd = !results.hidden && results.innerHTML.includes('data-entity="calendar.team"') && !results.innerHTML.includes('sensor.office');
+
+  type('OFFICE');
+  const filtersByFriendlyName = results.innerHTML.includes('Office &amp; Team') && !results.innerHTML.includes('calendar.waste');
+  results.dispatchEvent({
+    type: 'click',
+    target: { closest: (sel) => sel === 'button[data-entity]' ? { dataset: { entity: 'calendar.team' } } : null }
+  });
+  const addsFromSearch = edChanges.length === 1 && edChanges[0].entities.includes('calendar.team') && pick.value === '' && results.hidden;
+
+  type('sensor.office');
+  addc.dispatchEvent({ type: 'click' });
+  const rejectsInvalid = edChanges.length === 1 && Boolean(err.textContent);
+
+  type('calendar.team');
+  addc.dispatchEvent({ type: 'click' });
+  const rejectsDuplicate = edChanges.length === 1 && Boolean(err.textContent);
+
+  type(' calendar.extra_test ');
+  addc.dispatchEvent({ type: 'click' });
+  const addsTyped = edChanges.length === 2 && edChanges[1].entities.includes('calendar.extra_test');
+
+  type('calendar.keyboard');
+  pick.dispatchEvent({ type: 'keydown', key: 'Enter', preventDefault() {} });
+  const addsOnEnter = edChanges.length === 3 && edChanges[2].entities.includes('calendar.keyboard');
+  const keepsCalSettings = JSON.stringify(edChanges[2].calendars) === JSON.stringify(savedCals);
+
   const list = card.shadowRoot.getElementById('list');
   const legend = card.shadowRoot.getElementById('legend');
   const out = list.innerHTML;
@@ -138,7 +218,15 @@ setTimeout(() => {
     'holidays row has a calendar dot': out.includes('cdot'),
     'legend lists both calendars': legend.innerHTML.includes('Waste') && legend.innerHTML.includes('Holidays'),
     'header title multi': card.shadowRoot.getElementById('ht').textContent === 'Calendars',
-    'event count 10': card.shadowRoot.getElementById('count').textContent === '10 events'
+    'event count 10': card.shadowRoot.getElementById('count').textContent === '10 events',
+    'editor opens calendar suggestions on empty Add click': opensOnEmptyAdd,
+    'editor filters calendar entities by friendly name': filtersByFriendlyName,
+    'editor adds calendar from search result': addsFromSearch,
+    'editor rejects non-calendar input visibly': rejectsInvalid,
+    'editor rejects duplicate calendar visibly': rejectsDuplicate,
+    'editor adds typed calendar via Add button': addsTyped,
+    'editor adds typed calendar via Enter': addsOnEnter,
+    'editor preserves existing calendar names and colors': keepsCalSettings
   };
   let fail = 0;
   for (const k in checks) { console.log((checks[k] ? 'PASS' : 'FAIL') + '  ' + k); if (!checks[k]) fail++; }

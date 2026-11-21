@@ -10,7 +10,7 @@
 
   var CARD = 'glass-calendar-card';
   var EDITOR = CARD + '-editor';
-  var VERSION = '1.1.4';
+  var VERSION = '1.1.5';
   var REPO = 'https://github.com/renewelches/glass-calendar-card';
   if (customElements.get(CARD)) return;
 
@@ -79,7 +79,9 @@
       cals_h: 'Display name and color for each calendar. With multiple calendars, every event gets a small dot in its calendar’s color.',
       add_calendar: 'Add calendar',
       add_ph: 'Pick a calendar or type calendar.…',
-      add_invalid: 'Choose a calendar.* entry first',
+      add_invalid: 'Choose a result or enter a full calendar.* entity ID.',
+      add_duplicate: 'This calendar is already added.',
+      add_no_results: 'No matching calendars to add.',
       glass: 'Glass effect', glow: 'Glow intensity', border_radius: 'Corner radius',
       accent_color: 'Accent color', text_color: 'Text color',
       background_color: 'Background tint', background_opacity: 'Tint strength', reset_colors: 'Reset colors',
@@ -105,7 +107,9 @@
       cals_h: 'Anzeigename und Farbe für jeden Kalender. Bei mehreren Kalendern erhält jedes Ereignis einen Punkt in der Farbe seines Kalenders.',
       add_calendar: 'Kalender hinzufügen',
       add_ph: 'Kalender wählen oder calendar.… eingeben',
-      add_invalid: 'Bitte einen calendar.*-Eintrag auswählen',
+      add_invalid: 'Wähle ein Ergebnis oder gib eine vollständige calendar.*-Entitäts-ID ein.',
+      add_duplicate: 'Dieser Kalender wurde bereits hinzugefügt.',
+      add_no_results: 'Keine passenden Kalender zum Hinzufügen.',
       glass: 'Glas-Effekt', glow: 'Leuchtstärke', border_radius: 'Eckenradius',
       accent_color: 'Akzentfarbe', text_color: 'Textfarbe',
       background_color: 'Hintergrundtönung', background_opacity: 'Tönungsstärke', reset_colors: 'Farben zurücksetzen',
@@ -131,7 +135,9 @@
       cals_h: 'Nome e colore per ogni calendario. Con più calendari, ogni evento porta un punto nel colore del suo calendario.',
       add_calendar: 'Aggiungi calendario',
       add_ph: 'Scegli un calendario o scrivi calendar.…',
-      add_invalid: 'Scegli un elemento calendar.*',
+      add_invalid: 'Scegli un risultato o inserisci un ID entità calendar.* completo.',
+      add_duplicate: 'Questo calendario è già stato aggiunto.',
+      add_no_results: 'Nessun calendario corrispondente da aggiungere.',
       glass: 'Effetto vetro', glow: 'Intensità del bagliore', border_radius: 'Raggio degli angoli',
       accent_color: 'Colore principale', text_color: 'Colore dei testi',
       background_color: 'Tinta dello sfondo', background_opacity: 'Intensità della tinta', reset_colors: 'Ripristina i colori',
@@ -682,7 +688,7 @@
       if (this._form) this._form.hass = h;
       (this._rows || []).forEach(function (r) { r.hass = h; });
       (this._calRows || []).forEach(function (r) { r.hass = h; });
-      if (this._calsPanel) this._rebuildCalDl();
+      if (this._calsPanel && this._calSearchOpen) this._drawCalResults();
       if (!this._form) this._draw();
     }
     connectedCallback() { this._draw(); }
@@ -823,8 +829,13 @@
           '.chip ha-icon{--mdc-icon-size:14px}' +
           '.chip .cdot{width:8px;height:8px;border-radius:50%;background:var(--cc);box-shadow:0 0 6px var(--cc);flex:none}' +
           '.addrow{display:flex;gap:8px;align-items:flex-start;margin-top:10px}.addrow .grow{flex:1;min-width:0}' +
-          '.addrow input{width:100%;font:inherit;font-size:14px;color:var(--primary-text-color);background:var(--secondary-background-color);border:1px solid var(--divider-color);border-radius:10px;padding:9px 12px;outline:none;-webkit-appearance:none}' +
+          '.addrow input{box-sizing:border-box;width:100%;font:inherit;font-size:14px;color:var(--primary-text-color);background:var(--secondary-background-color);border:1px solid var(--divider-color);border-radius:10px;padding:9px 12px;outline:none;-webkit-appearance:none}' +
           '.addrow input:focus{border-color:var(--accent-color, #5ff3ff)}' +
+          '#cal-results{max-height:180px;overflow:auto}' +
+          '#cal-results button{display:block;width:100%;padding:8px 12px;border:0;border-radius:6px;background:none;color:var(--primary-text-color);font:inherit;text-align:start;overflow-wrap:anywhere;cursor:pointer}' +
+          '#cal-results button:hover,#cal-results button:focus-visible{background:var(--secondary-background-color)}' +
+          '#cal-results small{display:block;color:var(--secondary-text-color)}' +
+          '#cal-error{margin:0;color:var(--error-color, #db4437);font-size:13px}#cal-error:empty{display:none}' +
           '.calid{font-size:12px;color:var(--secondary-text-color);font-family:var(--ha-font-family-monospace, monospace);margin:0 0 6px}' +
           '.foot{font-size:12px;color:var(--secondary-text-color);text-align:right}.foot a{color:inherit}' +
           '</style><div class="box"><div id="form"></div><div id="cals"></div><div id="types"></div>' +
@@ -884,31 +895,29 @@
       }, this);
       return out;
     }
-    _isCalId(id) {
-      if (!id) return false;
-      id = normId(id);
-      if (id.indexOf('calendar.') === 0) return true;
-      for (var k in this._hass.states) {
-        if (k === id && this._hass.states[k].attributes && this._hass.states[k].attributes.domain === 'calendar') return true;
+    _drawCalResults() {
+      var panel = this._calsPanel, results = panel.querySelector('#cal-results');
+      var html = '';
+      if (this._calSearchOpen) {
+        var query = panel.querySelector('#pick').value.trim().toLowerCase();
+        var states = (this._hass && this._hass.states) || {};
+        var selected = resolveCals(this._config).map(function (cal) { return cal.id; });
+        html = Object.keys(states).filter(function (id) {
+          return id.indexOf('calendar.') === 0 && selected.indexOf(id) < 0;
+        }).sort().map(function (id) {
+          var state = states[id], attrs = state && state.attributes;
+          var name = (attrs && attrs.friendly_name) || '';
+          if (!id.includes(query) && !name.toLowerCase().includes(query)) return '';
+          return '<button type="button" data-entity="' + esc(id) + '">' +
+            (name && name !== id ? esc(name) + '<small>' + esc(id) + '</small>' : esc(id)) + '</button>';
+        }).join('');
+        if (!html) html = '<p class="help">' + esc(this._L('add_no_results')) + '</p>';
       }
-      return false;
-    }
-    _rebuildCalDl() {
-      var panel = this._calsPanel;
-      if (!panel || !this._hass || !this._hass.states) return;
-      var dl = panel.querySelector('#caldl');
-      if (!dl) return;
-      var html = '', seen = {};
-      for (var id in this._hass.states) {
-        var st = this._hass.states[id];
-        if (!st || st.attributes.domain !== 'calendar' || seen[id]) continue;
-        seen[id] = 1;
-        var fn = st.attributes.friendly_name || '';
-        html += '<option value="' + esc(id) + '"' + (fn ? ' label="' + esc(fn) + '"' : '') + '></option>';
+      results.hidden = !this._calSearchOpen;
+      if (html !== this._calResultsHtml) {
+        this._calResultsHtml = html;
+        results.innerHTML = html;
       }
-      if (html === this._calDlHtml) return;
-      this._calDlHtml = html;
-      dl.innerHTML = html;
     }
     _setCals(ids) {
       var v = Object.assign({}, this._config, { entities: ids });
@@ -918,42 +927,64 @@
       this._emit(this._clean(v));
     }
     _addCal(id) {
-      id = normId(id);
-      if (!id) return false;
       var ids = resolveCals(this._config).map(function (x) { return x.id; });
-      if (ids.indexOf(id) < 0) ids.push(id);
-      this._setCals(ids);
+      if (ids.indexOf(id) >= 0) return false;
+      this._setCals(ids.concat(id));
       return true;
     }
     _drawCals() {
       var self = this, L = this._L.bind(this), host = this._root.getElementById('cals'), c = this._config;
       var cals = resolveCals(c);
       var key = cals.map(function (x) { return x.id; }).join(',');
-      if (!cals.length) { host.innerHTML = ''; this._calRows = []; this._calsPanel = null; this._calKey = null; return; }
       if (!this._calsPanel || !host.contains(this._calsPanel)) {
         host.innerHTML = '';
         var p = document.createElement('ha-expansion-panel');
         p.outlined = true; p.expanded = true; p.header = L('s_calendars');
-        p.innerHTML = '<div class="types"><div id="chips"></div>' +
-          '<div class="addrow"><div class="grow"><input id="pick" type="text" list="caldl" autocomplete="off" spellcheck="false" placeholder="' + esc(L('add_ph')) + '"></div>' +
-          '<datalist id="caldl"></datalist>' +
-          '<button class="b" id="addc"><ha-icon icon="mdi:plus"></ha-icon>' + esc(L('add_calendar')) + '</button></div>' +
+        p.innerHTML = '<div class="types"><div id="chips" class="chips"></div>' +
+          '<div class="addrow"><div class="grow"><input id="pick" type="text" autocomplete="off" spellcheck="false" aria-controls="cal-results" aria-describedby="cal-error" aria-label="' + esc(L('add_ph')) + '" placeholder="' + esc(L('add_ph')) + '"></div>' +
+          '<button type="button" class="b" id="addc"><ha-icon icon="mdi:plus"></ha-icon>' + esc(L('add_calendar')) + '</button></div>' +
+          '<div id="cal-results" hidden></div><p id="cal-error" role="status"></p>' +
           '<p class="help" id="chelp">' + esc(L('cals_h')) + '</p><div id="rows"></div></div>';
         host.appendChild(p);
         this._calsPanel = p; this._calKey = null;
-        var doAdd = function () {
-          var inp = p.querySelector('#pick');
-          var id = normId(inp.value);
-          if (!self._isCalId(id)) { console.info('Glass Calendar Card: ' + L('add_invalid')); return; }
-          if (self._addCal(id)) inp.value = '';
+        this._calSearchOpen = false; this._calResultsHtml = null;
+        var inp = p.querySelector('#pick'), error = p.querySelector('#cal-error');
+        var setError = function (key) {
+          error.textContent = key ? L(key) : '';
+          inp.setAttribute('aria-invalid', key ? 'true' : 'false');
         };
-        p.querySelector('#addc').addEventListener('click', doAdd);
-        p.querySelector('#pick').addEventListener('change', doAdd);
-        p.querySelector('#pick').addEventListener('keydown', function (ev) {
-          if (ev.key === 'Enter') { ev.preventDefault(); doAdd(); }
+        var doAdd = function (id) {
+          if (!/^calendar\.[a-z0-9_]+$/.test(id)) { setError('add_invalid'); return; }
+          if (!self._addCal(id)) { setError('add_duplicate'); return; }
+          inp.value = '';
+          setError();
+          self._calSearchOpen = false;
+          self._drawCalResults();
+        };
+        var showResults = function () { self._calSearchOpen = true; self._drawCalResults(); };
+        var addTyped = function () {
+          var id = inp.value.trim().toLowerCase();
+          if (id) doAdd(id);
+          else { inp.focus(); showResults(); }
+        };
+        inp.addEventListener('focus', showResults);
+        inp.addEventListener('input', function () { setError(); showResults(); });
+        p.querySelector('#addc').addEventListener('click', addTyped);
+        p.querySelector('#cal-results').addEventListener('click', function (ev) {
+          var button = ev.target.closest('button[data-entity]');
+          if (button) { inp.focus(); doAdd(button.dataset.entity); }
+        });
+        inp.addEventListener('keydown', function (ev) {
+          if (ev.isComposing) return;
+          if (ev.key === 'Enter') { ev.preventDefault(); addTyped(); }
+          if (ev.key === 'Escape' && self._calSearchOpen) {
+            ev.stopPropagation();
+            self._calSearchOpen = false;
+            self._drawCalResults();
+          }
         });
       }
-      this._rebuildCalDl();
+      this._drawCalResults();
       this._calsPanel.querySelector('#chelp').style.display = cals.length > 1 ? '' : 'none';
       var chipsEl = this._calsPanel.querySelector('#chips');
       var rowsEl = this._calsPanel.querySelector('#rows');
